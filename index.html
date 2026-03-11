@@ -10,25 +10,28 @@
     rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
     :root {
       --font-main: 'Outfit', sans-serif;
-      --bg-color: #020617;
-      /* Near Black / Deepest Navy */
-      --card-bg: #0f172a;
-      /* Navy Blue */
-      --card-border: rgba(255, 255, 255, 0.05);
-      --accent-blue: #38bdf8;
-      --accent-blue-dim: rgba(56, 189, 248, 0.15);
-      --accent-cyan: #06b6d4;
-      --accent-orange: #fbbf24;
-      --accent-red: #f43f5e;
-      --text-primary: #f8fafc;
-      --text-secondary: #94a3b8;
-      --text-dim: #64748b;
-      --glass-bg: rgba(15, 23, 42, 0.8);
-      --glass-blur: blur(12px);
-      --glass-border: rgba(255, 255, 255, 0.05);
+      --bg-dark: #0f172a; /* Deep Slate/Matte Navy background */
+      --glass-bg: rgba(30, 41, 59, 0.7); /* Translucent dark glass */
+      --glass-border: rgba(148, 163, 184, 0.2); 
+      --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      
+      /* Professional Theme Colors */
+      --accent-cyan: #38bdf8; /* Lighter Sky Blue for contrast */
+      --accent-magenta: #e879f9; 
+      --accent-emerald: #34d399; 
+      --accent-blue: #0284c7; 
+      --accent-orange: #fbbf24; 
+      
+      --text-primary: #f8fafc; /* Inverted: White for primary text */
+      --text-secondary: #cbd5e1; /* Light Slate for secondary */
+      --text-dim: #94a3b8; /* Slate 400 */
+      
+      --br-xl: 12px;
+      --br-lg: 8px;
     }
 
     * {
@@ -39,37 +42,141 @@
 
     body {
       font-family: var(--font-main);
-      background-color: #020617;
-      /* Solid fallback */
+      background: var(--bg-dark);
       color: var(--text-primary);
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
       margin: 0;
+      min-height: 100vh;
+      position: relative;
     }
 
-    /* Ensure the body itself doesn't hide the overlay if it has a class */
-    body.weather-sunny,
-    body.weather-rainy {
-      background: none !important;
+    /* Minimal Professional Background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 100%);
+      z-index: -3; /* Behind the 3D canvas */
+    }
+
+    #bg-canvas-container {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: -2;
+      pointer-events: none; /* Let clicks pass through */
+    }
+
+    /* Atmosphere removed */
+    body::after {
+      display: none;
+    }
+
+    @keyframes grid-move {
+      from { transform: translateY(0); }
+      to { transform: translateY(50px); }
     }
 
     /* Utility Classes */
     .glass {
       background: var(--glass-bg);
-      backdrop-filter: var(--glass-blur);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--glass-border);
-      border-radius: 16px;
+      border-radius: var(--br-xl);
+      box-shadow: var(--glass-shadow);
+      position: relative;
     }
 
     .gradient-text {
-      background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
-      background-clip: text;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: var(--accent-orange);
+      font-weight: 700;
     }
 
     .glow-blue {
-      box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+      /* Removed shadow for matte look */
+    }
+
+    /* 3D Welcome Splash Styles */
+    #welcome-splash {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: #0f172a;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 1s ease, visibility 1s;
+      overflow: hidden;
+    }
+
+    #welcome-splash.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    #three-canvas-container {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 1;
+    }
+
+    .splash-content {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .splash-title {
+      font-family: 'Dancing Script', cursive;
+      font-size: 5.5rem;
+      color: #fff;
+      margin-bottom: 0.5rem;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeInUp 1s ease forwards 0.5s;
+      text-shadow: 0 0 30px rgba(14, 165, 233, 0.8), 0 0 10px rgba(0,0,0,0.5);
+      letter-spacing: 2px;
+    }
+
+    .splash-subtitle {
+      font-size: 1.8rem;
+      background: linear-gradient(to right, #fff, var(--accent-cyan), #fff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 700;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeInUp 1s ease forwards 1s;
+      filter: drop-shadow(0 0 8px rgba(14, 165, 233, 0.6));
+    }
+
+    /* Radial glow for text separation */
+    #welcome-splash::after {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(14, 165, 233, 0.15) 0%, transparent 70%);
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    @keyframes fadeInUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     /* App Layout */
@@ -83,101 +190,113 @@
     .sidebar {
       width: 260px;
       height: 100vh;
-      background: transparent;
-      /* Reveal global background */
-      padding: 1.5rem;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow: 4px 0 20px rgba(0, 0, 0, 0.2);
+      padding: 0;
       position: fixed;
-      border-right: 1px solid var(--card-border);
       z-index: 100;
+      display: flex;
+      flex-direction: column;
     }
 
     .sidebar-header {
-      margin-bottom: 2.5rem;
-      display: flex;
-      justify-content: center;
-      padding-bottom: 1.5rem;
-      border-bottom: 1px solid var(--card-border);
-    }
-
-    .logo {
+      padding: 1.5rem 1.5rem 1rem;
       display: flex;
       align-items: center;
       gap: 0.75rem;
-    }
-
-    .logo-text {
-      font-weight: 700;
-      font-size: 1.5rem;
-      letter-spacing: -0.02em;
-    }
-
-    /* Premium Logo Styling */
-    .premium-logo {
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.4));
-      cursor: pointer;
-    }
-
-    .premium-logo:hover {
-      transform: scale(1.05);
-      filter: drop-shadow(0 0 20px rgba(56, 189, 248, 0.7)) !important;
-    }
-
-    .nav-menu {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      margin-bottom: 0.5rem;
     }
 
     .nav-item {
       display: flex;
       align-items: center;
-      gap: 1rem;
-      padding: 1rem;
-      border-radius: 12px;
+      gap: 0.85rem;
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
       cursor: pointer;
       transition: all 0.2s ease;
-      color: var(--text-secondary);
-      border: none;
-      background: none;
+      color: #64748b;
+      border: 1px solid transparent;
+      background: transparent;
       width: 100%;
       text-align: left;
+      font-weight: 500;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.25rem;
+      position: relative;
     }
 
+    .nav-item i { width: 16px; height: 16px; flex-shrink: 0; }
+
     .nav-item:hover {
-      background: rgba(255, 255, 255, 0.05);
-      color: var(--text-primary);
+      background: #f1f5f9;
+      color: var(--accent-cyan);
     }
 
     .nav-item.active {
-      background: rgba(59, 130, 246, 0.1);
-      color: var(--accent-blue);
+      background: rgba(14, 165, 233, 0.08);
+      color: var(--accent-cyan);
+      border-color: rgba(14, 165, 233, 0.1);
+      font-weight: 600;
+    }
+
+    .nav-item.active::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 25%;
+      width: 4px; height: 50%;
+      background: var(--accent-cyan);
+      border-radius: 0 4px 4px 0;
     }
 
     .main-content {
       margin-left: 260px;
-      padding: 2.5rem;
+      padding: 0;
       width: calc(100% - 260px);
       background: transparent;
-      /* Reveal global background */
       min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
 
+    /* TOP APP BAR */
     .content-header {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 2rem;
-      padding: 1.5rem;
+      align-items: center;
+      padding: 1.25rem 2.5rem;
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      margin-bottom: 0;
+    }
+
+    .page-content {
+      padding: 2rem;
     }
 
     .header-info h1 {
-      font-size: 2rem;
-      margin-bottom: 0.5rem;
+      font-size: 2.2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
     }
 
     .header-info p {
-      color: var(--text-secondary);
+      color: var(--text-dim);
+      font-size: 1.1rem;
+      font-weight: 400;
     }
 
     /* Dashboard Sections */
@@ -205,46 +324,65 @@
     /* Forecast Styles */
     .forecast-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-      gap: 1rem;
-      margin-bottom: 2rem;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2.5rem;
     }
 
     .forecast-card {
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 1.5rem 1rem;
-      gap: 0.75rem;
+      padding: 2.2rem 1.5rem;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--br-xl);
+      transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+      cursor: pointer;
     }
 
-    .day-name {
-      font-weight: 700;
-      font-size: 1.1rem;
+    .forecast-card:hover {
+      transform: translateY(-8px);
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
     }
 
-    .date-label {
-      font-size: 0.8rem;
+    .forecast-card .day-name {
+      font-weight: 600;
+      font-size: 1.2rem;
+      color: var(--text-primary);
+      margin-bottom: 0.2rem;
+    }
+
+    .forecast-card .date-label {
+      font-size: 0.85rem;
       color: var(--text-dim);
+      margin-bottom: 1.2rem;
     }
 
     .high-temp {
-      font-size: 1.5rem;
+      font-size: 2rem;
       font-weight: 700;
+      color: var(--accent-orange);
     }
 
     .low-temp {
-      font-size: 0.9rem;
-      color: var(--text-secondary);
+      font-size: 1rem;
+      color: var(--text-dim);
+      margin-top: 0.25rem;
     }
 
     .rain-chance {
       display: flex;
       align-items: center;
-      gap: 0.25rem;
-      font-size: 0.8rem;
+      gap: 0.5rem;
+      padding: 0.4rem 0.8rem;
+      background: #fdf2ef;
+      border-radius: 6px;
+      margin-top: 1rem;
+      font-size: 0.85rem;
       font-weight: 600;
-      color: var(--accent-blue);
+      color: var(--accent-orange);
     }
 
     /* Map Styles */
@@ -278,10 +416,11 @@
       align-items: center;
       gap: 0.75rem;
       padding: 0.75rem 1rem;
-      background: rgba(5, 6, 15, 0.8);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      border-radius: 10px;
-      backdrop-filter: blur(8px);
+      background: #ffffff;
+      border: 1px solid #fee2e2;
+      border-radius: 6px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      color: var(--text-primary);
     }
 
     .alert-dot {
@@ -296,31 +435,74 @@
     .charts-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
-      gap: 1.5rem;
-      margin-bottom: 2rem;
+      gap: 1.25rem;
+      margin-bottom: 1.5rem;
     }
 
     .chart-card {
       padding: 1.5rem;
-      height: 400px;
+      height: 380px;
+      border-radius: 12px;
+    }
+    .chart-card h4 {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
     }
 
     .metric-cards {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 1.5rem;
-      margin-bottom: 2rem;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.5rem;
     }
 
     .metric-card {
       padding: 1.5rem;
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 4px; height: 100%;
+      background: var(--accent-cyan);
+    }
+
+    .metric-card h3 {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 0.75rem;
     }
 
     .metric-card .value {
-      font-size: 2.5rem;
+      font-size: 2.2rem;
       font-weight: 700;
-      margin-top: 1rem;
       display: block;
+      color: var(--text-primary);
+      letter-spacing: -0.5px;
+      line-height: 1;
+    }
+
+    .metric-card p {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-top: 0.5rem;
     }
 
     .city-insights-card {
@@ -355,8 +537,8 @@
 
     .date-pill {
       padding: 0.4rem 0.8rem;
-      border-radius: 20px;
-      background: rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      background: rgba(100, 150, 255, 0.1);
       border: 1px solid var(--glass-border);
       color: var(--text-secondary);
       cursor: pointer;
@@ -374,9 +556,9 @@
       align-items: center;
       gap: 0.75rem;
       padding: 0.75rem 1.5rem;
-      background: #141f33;
+      background: rgba(10, 22, 50, 0.8);
       border: 1px solid var(--glass-border);
-      border-radius: 4px;
+      border-radius: 6px;
     }
 
     .search-input-container input {
@@ -388,13 +570,14 @@
       font-family: var(--font-main);
       font-size: 1rem;
     }
+    .search-input-container input::placeholder { color: var(--text-dim); }
 
     .search-btn {
       background: var(--accent-blue);
       color: white;
       border: none;
       padding: 0.75rem 2.5rem;
-      border-radius: 4px;
+      border-radius: 6px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s ease;
@@ -403,8 +586,7 @@
     }
 
     .search-btn:hover {
-      background: #0284c7;
-      box-shadow: 0 0 15px rgba(14, 165, 233, 0.4);
+      background: #2563eb;
     }
 
     .main-weather-card {
@@ -471,48 +653,44 @@
 
     .sun-glow {
       position: absolute;
-      top: -10%;
-      left: -10%;
-      width: 50%;
-      height: 50%;
-      background: radial-gradient(circle, rgba(234, 182, 118, 0.15), transparent 70%);
-      filter: blur(80px);
+      bottom: -40%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80vw;
+      height: 80vw;
+      background: radial-gradient(circle at center, rgba(253, 186, 116, 0.4) 0%, rgba(251, 146, 60, 0.2) 30%, transparent 70%);
+      filter: blur(60px);
       display: none;
-      animation: pulse-sun 12s ease-in-out infinite alternate;
+      animation: sun-rise 15s ease-out forwards;
+      pointer-events: none;
     }
 
     .sun-rays {
+      /* Removed fake repeating rays to keep it natural, opting for a softer horizon glow */
       position: absolute;
-      top: 0;
+      bottom: 0;
       left: 0;
       width: 100%;
-      height: 100%;
-      background: repeating-conic-gradient(from 0deg, rgba(253, 224, 71, 0.03) 0deg 10deg, transparent 10deg 20deg);
-      mask-image: radial-gradient(circle at 10% 10%, black, transparent 60%);
-      -webkit-mask-image: radial-gradient(circle at 10% 10%, black, transparent 60%);
+      height: 40%;
+      background: linear-gradient(0deg, rgba(253, 186, 116, 0.1) 0%, transparent 100%);
       display: none;
-      animation: rotate-rays 120s linear infinite;
+      animation: fadeIn 3s ease-in forwards;
+      pointer-events: none;
     }
 
-    @keyframes rotate-rays {
-      from {
-        transform: rotate(0deg);
+    @keyframes sun-rise {
+      0% {
+        bottom: -60%;
+        opacity: 0;
       }
 
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    @keyframes pulse-sun {
-      from {
-        transform: scale(1);
-        opacity: 0.4;
-      }
-
-      to {
-        transform: scale(1.3);
+      50% {
         opacity: 0.8;
+      }
+
+      100% {
+        bottom: -10%;
+        opacity: 1;
       }
     }
 
@@ -521,20 +699,45 @@
       width: 100%;
       height: 100%;
       display: none;
+      z-index: 3;
     }
 
     .rain-drop {
       position: absolute;
-      background-color: rgba(56, 189, 248, 0.2);
-      width: 1px;
-      height: 20px;
-      top: -20px;
+      background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.4));
+      width: 1.5px;
+      height: 120px;
+      top: -120px;
+      border-radius: 50%;
       animation: fall linear infinite;
+    }
+
+    /* 3D Snow Drop */
+    .snow-drop {
+      position: absolute;
+      background: #fff;
+      border-radius: 50%;
+      opacity: 0.8;
+      pointer-events: none;
+      filter: blur(1.5px);
+      animation: snow-fall linear infinite;
+    }
+
+    @keyframes snow-fall {
+      0% {
+        transform: translateY(-20px) translateX(0) rotate(0deg);
+      }
+
+      100% {
+        transform: translateY(110vh) translateX(50px) rotate(360deg);
+      }
     }
 
     @keyframes fall {
       to {
-        transform: translateY(110vh);
+        transform: translateY(110vh) translateX(15px);
+        /* Add a slight angle for realism */
+        opacity: 0;
       }
     }
 
@@ -543,7 +746,8 @@
       position: absolute;
       width: 100%;
       height: 100%;
-      display: none;
+      pointer-events: none;
+      z-index: 5;
       background: rgba(255, 255, 255, 0);
       transition: background 0.1s ease;
     }
@@ -554,7 +758,8 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(147, 197, 253, 0.2);
+      background: rgba(224, 242, 254, 0.15);
+      /* Elegant Azure Flash */
       opacity: 0;
       pointer-events: none;
     }
@@ -578,6 +783,18 @@
       92% {
         opacity: 0.9;
       }
+
+      93% {
+        opacity: 0;
+      }
+
+      94% {
+        opacity: 0.6;
+      }
+
+      95% {
+        opacity: 0;
+      }
     }
 
     body.weather-sunny .sun-glow,
@@ -586,15 +803,14 @@
     }
 
     body.weather-sunny {
-      background: linear-gradient(135deg, #020617 0%, #0c1c3d 100%) !important;
+      background: transparent !important;
     }
 
-    body.weather-rainy .rain-field {
+    body.weather-rainy .rain-field,
+    body.weather-lightning .rain-field,
+    body.weather-sunny .rain-field {
       display: block;
-    }
-
-    body.weather-rainy {
-      background: linear-gradient(180deg, #02040a 0%, #111a2e 100%) !important;
+      perspective: 1000px;
     }
 
     body.weather-lightning .lightning-field {
@@ -602,106 +818,339 @@
     }
 
     body.weather-lightning .lightning-strike {
-      animation: flash 4s infinite;
+      animation: flash 4s infinite, screenShake 4s infinite;
     }
 
-    body.weather-lightning .rain-field {
+    body.weather-lightning .lightning-strike {
+      animation: flash 4s infinite, screenShake 4s infinite;
+    }
+
+    /* Snow Transition */
+    .snow-field {
+      display: none;
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    body.weather-snowy .snow-field {
       display: block;
     }
 
-    body.weather-lightning {
-      background: #010205 !important;
+    /* 3D Rain Drop */
+    .rain-drop {
+      position: absolute;
+      background: linear-gradient(180deg, transparent, rgba(14, 165, 233, 0.6));
+      width: 2px;
+      height: 40px;
+      top: -40px;
+      animation: fall3d linear infinite;
+      transform-style: preserve-3d;
     }
 
-    /* Darker for rain */
+    @keyframes fall3d {
+      0% {
+        transform: translateY(-40px) translateZ(0) rotateX(0deg);
+        opacity: 0;
+      }
+
+      10% {
+        opacity: 1;
+      }
+
+      90% {
+        opacity: 1;
+      }
+
+      100% {
+        transform: translateY(110vh) translateZ(200px) rotateX(20deg);
+        opacity: 0;
+      }
+    }
+
+    /* === REALISTIC 3D WEATHER WIDGET === */
+    .premium-weather-widget {
+      background: linear-gradient(160deg, #4facfe 0%, #00f2fe 100%);
+      border-radius: 20px;
+      padding: 2.5rem 2.5rem 0;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      color: #fff;
+      border: none;
+      box-shadow: 0 15px 45px rgba(0, 165, 233, 0.2);
+      min-height: 540px;
+    }
+
+    .premium-weather-widget::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: radial-gradient(circle at 10% 10%, rgba(255,255,255,0.4) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    /* 3D Sun Animation */
+    .w-sun {
+      position: absolute;
+      top: 50px; right: 60px;
+      width: 140px; height: 140px;
+      z-index: 2;
+    }
+
+    .w-sun-core {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80px; height: 80px;
+      background: radial-gradient(circle at 30% 30%, #fff, #ffdf5e 40%, #ffc107 100%);
+      border-radius: 50%;
+      box-shadow: 0 0 50px rgba(255, 214, 0, 0.8), inset -5px -5px 15px rgba(0,0,0,0.1);
+      z-index: 3;
+      animation: sun-pulse 4s ease-in-out infinite alternate;
+    }
+
+    .w-sun-glow {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 140px; height: 140px;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle, rgba(255, 230, 0, 0.4) 0%, transparent 70%);
+      border-radius: 50%;
+      z-index: 1;
+      animation: rotate-glow 20s linear infinite;
+    }
+
+    @keyframes sun-pulse {
+      from { transform: translate(-50%, -50%) scale(1); opacity: 0.9; }
+      to { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+    }
+
+    @keyframes rotate-glow {
+      from { transform: translate(-50%, -50%) rotate(0deg); }
+      to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    /* Real Floating 3D Cloud */
+    .w-cloud {
+      position: absolute;
+      right: -20px; top: 100px;
+      width: 250px; height: 120px;
+      z-index: 4;
+      animation: float-3d 8s ease-in-out infinite alternate;
+      filter: drop-shadow(0 10px 20px rgba(0,0,0,0.1));
+    }
+
+    .w-cloud-body {
+      width: 180px; height: 60px;
+      background: #ffffff;
+      border-radius: 50px;
+      position: relative;
+      margin: 30px auto 0;
+    }
+
+    .w-cloud-body::before {
+      content: ''; position: absolute;
+      top: -30px; left: 35px;
+      width: 85px; height: 85px;
+      background: #ffffff;
+      border-radius: 50%;
+      box-shadow: 5px -5px 10px rgba(0,0,0,0.02);
+    }
+
+    .w-cloud-body::after {
+      content: ''; position: absolute;
+      top: -20px; left: 95px;
+      width: 65px; height: 65px;
+      background: #ffffff;
+      border-radius: 50%;
+      box-shadow: 3px -3px 5px rgba(0,0,0,0.02);
+    }
+
+    @keyframes float-3d {
+      0% { transform: translate(0, 0) rotate(0deg); }
+      100% { transform: translate(-20px, -15px) rotate(2deg); }
+    }
+
+    /* Professional Widget Labels */
+    .widget-city-name {
+      font-size: 1.1rem; font-weight: 600;
+      color: #fff;
+      display: flex; align-items: center; gap: 0.5rem;
+      letter-spacing: 1px;
+    }
+    .widget-date-line {
+      font-size: 1.5rem; font-weight: 700; color: #fff; line-height: 1.2;
+    }
+    .widget-time-line {
+      font-size: 4rem; font-weight: 800; color: #fff; line-height: 1;
+      letter-spacing: -2px;
+      margin-top: 0.5rem;
+    }
+    .widget-condition-label {
+      font-size: 1rem; font-weight: 600;
+      color: #fff;
+      text-transform: uppercase; letter-spacing: 2px;
+      margin-top: 1.5rem;
+      background: rgba(255, 255, 255, 0.2);
+      padding: 0.4rem 1.2rem;
+      border-radius: 30px;
+      width: fit-content;
+    }
+
+    .widget-main-temp {
+      font-size: 6rem; font-weight: 800;
+      color: #fff; line-height: 1;
+    }
+    .widget-stat-list {
+      display: flex; flex-direction: column;
+      align-items: flex-end; gap: 0.4rem;
+      font-size: 0.85rem; color: rgba(255,255,255,0.8);
+    }
+    .widget-stat-item { display: flex; align-items: center; gap: 0.4rem; }
+
+    /* Bottom Forecast Bar */
+    .widget-bottom-row {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 0;
+      margin-top: auto;
+      margin-left: -2.5rem; margin-right: -2.5rem;
+      padding: 1.2rem 1rem 1.5rem;
+      background: rgba(0, 50, 120, 0.35);
+      backdrop-filter: blur(10px);
+      z-index: 5;
+    }
+    .widget-forecast-col {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 0.4rem;
+      padding: 0.75rem 0.3rem;
+      border-right: 1px solid rgba(255,255,255,0.12);
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .widget-forecast-col:last-child { border-right: none; }
+    .widget-forecast-col:hover,
+    .widget-forecast-col.active {
+      background: rgba(255,255,255,0.12);
+    }
+    .widget-forecast-col .f-day {
+      font-size: 0.75rem; font-weight: 600;
+      text-transform: uppercase; color: rgba(255,255,255,0.7);
+      letter-spacing: 0.5px;
+    }
+    .widget-forecast-col .f-icon { width: 28px; height: 28px; }
+    .widget-forecast-col .f-temp {
+      font-size: 1rem; font-weight: 700; color: #fff;
+    }
+    .widget-forecast-col .f-temp-min {
+      font-size: 0.8rem; color: rgba(255,255,255,0.55);
+    }
+
+    .glass-btn {
+      padding: 0.5rem 1.2rem;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      font-size: 0.8rem;
+      transition: all 0.2s;
+      backdrop-filter: blur(8px);
+    }
+    .glass-btn:hover {
+      background: rgba(255, 255, 255, 0.35);
+    }
+
     .premium-greeting {
-      font-family: 'Dancing Script', cursive;
-      font-size: 3.5rem;
-      text-align: center;
-      margin-bottom: 1rem;
-      background: linear-gradient(135deg, #a5b4fc, #818cf8, #c084fc);
-      background-clip: text;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      opacity: 0.9;
-      animation: fadeIn 1.5s ease-out backwards;
-      text-shadow: 0 0 30px rgba(129, 140, 248, 0.4);
-      width: 100%;
+      display: none; /* hidden - replaced with compact app bar */
     }
   </style>
 </head>
 
 <body>
-  <div class="weather-bg-overlay" id="global-atmosphere">
-    <div class="sun-glow"></div>
-    <div class="sun-rays"></div>
-    <div class="rain-field" id="rain-container"></div>
-    <div class="lightning-field">
-      <div class="lightning-strike"></div>
+  <div id="bg-canvas-container"></div>
+  <div id="welcome-splash">
+    <div id="three-canvas-container"></div>
+    <div class="splash-content">
+      <h1 class="splash-title">Welcome</h1>
+      <p class="splash-subtitle">Let's Predict Weather</p>
     </div>
   </div>
+
   <div class="app-container">
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-header">
-        <div class="logo">
-          <!-- Official VECARE logo from the user -->
-          <img src="vecare_logo.png" alt="VECARE Logo" class="premium-logo"
-            style="height: 54px; width: auto; max-width: 100%; object-fit: contain;"
-            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-          <div class="logo-fallback premium-logo" style="display: none; align-items: center; gap: 0.75rem;">
-            <i data-lucide="cloud-rain" class="accent-blue" style="width: 32px; height: 32px;"></i>
-            <span class="logo-text gradient-text">VECARE</span>
-          </div>
+        <img src="vecare_logo.png" alt="VECARE Logo" class="premium-logo"
+          style="height: 38px; width: auto; max-width: 100%; object-fit: contain;"
+          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="logo-fallback premium-logo" style="display: none; align-items: center; gap: 0.5rem;">
+          <i data-lucide="cloud-sun" style="width: 22px; height: 22px; color: var(--accent-orange);"></i>
+          <span style="color: #e2e8f0; font-weight: 700; font-size: 1.1rem; letter-spacing: 0.5px;">VECARE</span>
         </div>
       </div>
+
       <nav class="nav-menu">
-        <button class="nav-item active" onclick="showSection('forecast')">
-          <i data-lucide="calendar"></i>
-          <span class="nav-label">Forecast</span>
+        <div class="nav-section-label">Overview</div>
+        <button class="nav-item active" onclick="showSection('forecast', event)">
+          <i data-lucide="layout-dashboard"></i>
+          <span>Forecast</span>
         </button>
-        <button class="nav-item" onclick="showSection('radar')">
-          <i data-lucide="map"></i>
-          <span class="nav-label">Weather Radar</span>
+        <button class="nav-item" onclick="showSection('radar', event)">
+          <i data-lucide="radar"></i>
+          <span>Weather Radar</span>
         </button>
-        <button class="nav-item" onclick="showSection('analytics')">
+
+        <div class="nav-section-label">Intelligence</div>
+        <button class="nav-item" onclick="showSection('analytics', event)">
           <i data-lucide="bar-chart-2"></i>
-          <span class="nav-label">Analytics</span>
+          <span>Analytics</span>
         </button>
-        <button class="nav-item" onclick="showSection('regional')">
+        <button class="nav-item" onclick="showSection('regional', event)">
           <i data-lucide="globe"></i>
-          <span class="nav-label">Regional Weather</span>
+          <span>Regional</span>
         </button>
-        <button class="nav-item" onclick="showSection('search')">
+        <button class="nav-item" onclick="showSection('search', event)">
           <i data-lucide="search"></i>
-          <span class="nav-label">Live Search</span>
+          <span>Live Search</span>
         </button>
       </nav>
+
+      <div class="sidebar-version">VECARE v2.0 &bull; Weather Intelligence</div>
     </aside>
 
     <!-- Main Content -->
     <main class="main-content">
-      <header class="content-header glass">
-        <div class="header-info" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-          <div id="dynamic-greeting" class="premium-greeting">Good Afternoon</div>
-          <h1 id="page-title"
-            style="font-size: 1.2rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 4px; font-weight: 400; margin-top: -0.5rem;">
-            VE CARE WEATHER & ANALYTICS DASHBOARD</h1>
-          <p id="current-date" style="margin-top: 0.5rem;"></p>
-        </div>
-        <div class="header-actions" style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;">
-          <div class="glow-blue glass"
-            style="padding: 0.5rem 1rem; border-radius: 12px; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; cursor: pointer;"
-            onclick="fetchLiveWeather()">
-            <span class="live-dot"
-              style="width: 8px; height: 8px; background: #10b981; border-radius: 50%; display: inline-block; animation: pulse-green 2s infinite;"></span>
-            <span id="sync-status">Live Real-Time Data</span>
-            <i data-lucide="refresh-cw" style="width: 14px; margin-left: 0.2rem;" id="refresh-icon"></i>
+      <header class="content-header">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <div>
+            <div id="page-title" style="font-size: 0.7rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-dim);">Forecast</div>
+            <div style="font-size: 0.95rem; font-weight: 600; color: var(--text-primary); margin-top: 0.15rem;">VE CARE Weather &amp; Analytics</div>
           </div>
-          <small id="last-updated"
-            style="color: var(--text-dim); font-size: 0.7rem; letter-spacing: 0.05em;">SYNCING...</small>
+        </div>
+        <div style="display: flex; align-items: center; gap: 1.25rem;">
+          <span id="current-date" style="font-size: 0.78rem; color: var(--text-dim);"></span>
+          <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.85rem; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); border-radius: 6px; cursor: pointer; font-size: 0.78rem; font-weight: 600; color: #10b981;" onclick="fetchLiveWeather()">
+            <span class="live-dot" style="width: 6px; height: 6px; background: #10b981; border-radius: 50%; display: inline-block; animation: pulse-green 2s infinite;"></span>
+            <span id="sync-status">Live</span>
+            <i data-lucide="refresh-cw" style="width: 12px; height: 12px;" id="refresh-icon"></i>
+          </div>
+          <small id="last-updated" style="color: var(--text-dim); font-size: 0.68rem;">SYNCING...</small>
         </div>
       </header>
+
+      <div class="page-content">
 
       <style>
         @keyframes pulse-green {
@@ -721,32 +1170,8 @@
 
       <!-- Forecast Section -->
       <section id="forecast" class="dashboard-section active">
-        <div class="forecast-grid" id="forecast-grid"></div>
-        <div class="metric-cards">
-          <div class="metric-card glass" data-tilt data-tilt-max="12" data-tilt-speed="800" data-tilt-glare="true"
-            data-tilt-max-glare="0.3" data-tilt-scale="1.05">
-            <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary);">
-              <i data-lucide="wind" size="18"></i>
-              <span>Wind Velocity</span>
-            </div>
-            <span class="value">12 <small style="font-size: 1rem; font-weight: 300;">km/h</small></span>
-          </div>
-          <div class="metric-card glass" data-tilt data-tilt-max="12" data-tilt-speed="800" data-tilt-glare="true"
-            data-tilt-max-glare="0.3" data-tilt-scale="1.05">
-            <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary);">
-              <i data-lucide="droplets" size="18"></i>
-              <span>Humidity</span>
-            </div>
-            <span class="value">64%</span>
-          </div>
-          <div class="metric-card glass" data-tilt data-tilt-max="12" data-tilt-speed="800" data-tilt-glare="true"
-            data-tilt-max-glare="0.3" data-tilt-scale="1.05">
-            <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary);">
-              <i data-lucide="sun" size="18"></i>
-              <span>UV Index</span>
-            </div>
-            <span class="value">4.2</span>
-          </div>
+        <div class="premium-weather-widget" id="premium-weather-widget">
+          <!-- Widget Content Injected by JS -->
         </div>
       </section>
 
@@ -763,35 +1188,27 @@
       <!-- Analytics Section -->
       <section id="analytics" class="dashboard-section">
         <div class="metric-cards">
-          <div class="metric-card glass glow-blue" data-tilt data-tilt-max="10" data-tilt-speed="400"
-            data-tilt-glare="true" data-tilt-max-glare="0.2" style="transform-style: preserve-3d;">
-            <h3 style="font-size: 0.9rem; color: var(--text-secondary); transform: translateZ(20px);">PEAK CORRELATION
-            </h3>
-            <span class="value" style="transform: translateZ(40px);">88%</span>
-            <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 0.5rem; transform: translateZ(20px);">
-              Volume increase per 10mm rain</p>
+          <div class="metric-card glass">
+            <h3 style="font-size: 0.9rem; color: var(--text-secondary);">PEAK CORRELATION</h3>
+            <span class="value" id="peak-correlation-val" style="color: var(--text-primary);">88%</span>
+            <p id="correlation-description" style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">Volume increase per 10mm rain</p>
           </div>
-          <div class="metric-card glass" data-tilt data-tilt-max="10" data-tilt-speed="400" data-tilt-glare="true"
-            data-tilt-max-glare="0.2" style="transform-style: preserve-3d;">
-            <h3 style="font-size: 0.9rem; color: var(--text-secondary); transform: translateZ(20px);">CURRENT FESTIVAL
-            </h3>
-            <span class="value" id="active-festival" style="transform: translateZ(40px);">Loading...</span>
-            <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 0.5rem; transform: translateZ(20px);">2026
-              Load Impact active</p>
+          <div class="metric-card glass">
+            <h3 style="font-size: 0.9rem; color: var(--text-secondary);">CURRENT FESTIVAL</h3>
+            <span class="value" id="active-festival" style="color: var(--text-primary);">Loading...</span>
+            <p id="festival-impact-label" style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">2026 Load Impact active</p>
           </div>
         </div>
         <div class="charts-grid">
-          <div class="chart-card glass" data-tilt data-tilt-max="5" data-tilt-speed="400" data-tilt-glare="true"
-            data-tilt-max-glare="0.1" style="transform-style: preserve-3d; transition: all 0.3s ease;">
-            <h4 style="transform: translateZ(30px);">Live ML Call Load vs Rainfall</h4>
-            <div style="transform: translateZ(20px); height: calc(100% - 30px);">
+          <div class="chart-card glass">
+            <h4>Live ML Call Load vs Rainfall</h4>
+            <div style="height: calc(100% - 30px); margin-top: 1rem;">
               <canvas id="loadChart"></canvas>
             </div>
           </div>
-          <div class="chart-card glass" data-tilt data-tilt-max="5" data-tilt-speed="400" data-tilt-glare="true"
-            data-tilt-max-glare="0.1" style="transform-style: preserve-3d; transition: all 0.3s ease;">
-            <h4 style="transform: translateZ(30px);">Seasonal & Festival Impact</h4>
-            <div style="transform: translateZ(20px); height: calc(100% - 30px);">
+          <div class="chart-card glass">
+            <h4>Seasonal & Festival Impact</h4>
+            <div style="height: calc(100% - 30px); margin-top: 1rem;">
               <canvas id="seasonalChart"></canvas>
             </div>
           </div>
@@ -1025,6 +1442,270 @@
   </style>
 
   <script>
+    // --- 3D Welcome Animation (Three.js) ---
+    function init3DWelcome() {
+      const container = document.getElementById('three-canvas-container');
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+      
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer.domElement);
+
+      const group = new THREE.Group();
+      scene.add(group);
+
+      // 1. Inner Glowing Sphere
+      const innerGeom = new THREE.SphereGeometry(1.8, 64, 64);
+      const innerMat = new THREE.MeshPhongMaterial({
+        color: 0x0ea5e9,
+        emissive: 0x0ea5e9,
+        emissiveIntensity: 0.5,
+        transparent: true,
+        opacity: 0.3,
+      });
+      const innerSphere = new THREE.Mesh(innerGeom, innerMat);
+      group.add(innerSphere);
+
+      // 2. Outer Holographic Wireframe
+      const outerGeom = new THREE.SphereGeometry(2.2, 32, 32);
+      const outerMat = new THREE.MeshPhongMaterial({
+        color: 0x0ea5e9,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.4,
+      });
+      const outerWireframe = new THREE.Mesh(outerGeom, outerMat);
+      group.add(outerWireframe);
+
+      // 3. Floating Data Rings
+      const ringGeom = new THREE.TorusGeometry(2.8, 0.01, 16, 100);
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.2 });
+      const ring1 = new THREE.Mesh(ringGeom, ringMat);
+      const ring2 = new THREE.Mesh(ringGeom, ringMat);
+      ring1.rotation.x = Math.PI / 2;
+      ring2.rotation.y = Math.PI / 2;
+      group.add(ring1);
+      group.add(ring2);
+
+      // 4. Enhanced Particles (Nebula)
+      const particlesGeometry = new THREE.BufferGeometry();
+      const particlesCount = 3000;
+      const posArray = new Float32Array(particlesCount * 3);
+      const colorArray = new Float32Array(particlesCount * 3);
+
+      for(let i = 0; i < particlesCount * 3; i++) {
+        posArray[i] = (Math.random() - 0.5) * 15;
+        colorArray[i] = Math.random(); // Gradient colors
+      }
+      particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+      particlesGeometry.setAttribute('color', new THREE.BufferAttribute(colorArray, 3));
+      
+      const particlesMaterial = new THREE.PointsMaterial({
+        size: 0.015,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.6,
+        blending: THREE.AdditiveBlending
+      });
+      const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+      scene.add(particlesMesh);
+
+      // Lighting
+      const mainLight = new THREE.PointLight(0xffffff, 2, 50);
+      mainLight.position.set(5, 5, 5);
+      scene.add(mainLight);
+      scene.add(new THREE.AmbientLight(0x404040, 3));
+
+      camera.position.z = 6;
+
+      // Mouse Parallax
+      let mouseX = 0, mouseY = 0;
+      window.addEventListener('mousemove', (e) => {
+        mouseX = (e.clientX - window.innerWidth / 2) / 100;
+        mouseY = (e.clientY - window.innerHeight / 2) / 100;
+      });
+
+      function animate() {
+        requestAnimationFrame(animate);
+        
+        group.rotation.y += 0.003;
+        group.rotation.x += 0.001;
+        
+        ring1.rotation.z += 0.01;
+        ring2.rotation.z -= 0.01;
+        
+        particlesMesh.rotation.y -= 0.0005;
+        
+        // Smooth parallax
+        group.position.x += (mouseX - group.position.x) * 0.05;
+        group.position.y += (-mouseY - group.position.y) * 0.05;
+        
+        renderer.render(scene, camera);
+      }
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      animate();
+
+      // Premium Zoom Transition
+      setTimeout(() => {
+        const splash = document.getElementById('welcome-splash');
+        splash.style.pointerEvents = 'none';
+        
+        // Tween camera zoom
+        const zoomInterval = setInterval(() => {
+          camera.position.z -= 0.1;
+          if (camera.position.z <= 0) clearInterval(zoomInterval);
+        }, 16);
+
+        splash.classList.add('hidden');
+        
+        setTimeout(() => {
+          // Cleanup
+          renderer.dispose();
+          innerGeom.dispose();
+          innerMat.dispose();
+          outerGeom.dispose();
+          outerMat.dispose();
+          ringGeom.dispose();
+          ringMat.dispose();
+          particlesGeometry.dispose();
+          particlesMaterial.dispose();
+          container.innerHTML = '';
+        }, 1200);
+      }, 5500);
+    }
+
+    // --- Persistent 3D Background ---
+    function init3DBackground() {
+      const container = document.getElementById('bg-canvas-container');
+      if (!container) return;
+
+      const scene = new THREE.Scene();
+      // Add subtle fog to blend particles into the distance
+      scene.fog = new THREE.FogExp2(0x0f172a, 0.015);
+
+      const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.z = 30;
+
+      const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer.domElement);
+
+      // Create a flowing particle field
+      const geometry = new THREE.BufferGeometry();
+      const count = 2000;
+      const positions = new Float32Array(count * 3);
+      const phases = new Float32Array(count); // For individual animation logic
+
+      for(let i = 0; i < count; i++) {
+        positions[i*3] = (Math.random() - 0.5) * 100; // x
+        positions[i*3+1] = (Math.random() - 0.5) * 100; // y
+        positions[i*3+2] = (Math.random() - 0.5) * 50; // z
+        phases[i] = Math.random() * Math.PI * 2;
+      }
+
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute('aPhase', new THREE.BufferAttribute(phases, 1));
+
+      // Custom shader material for dynamic, undulating particles
+      const material = new THREE.ShaderMaterial({
+        uniforms: {
+          time: { value: 0 },
+          color: { value: new THREE.Color(0x38bdf8) }
+        },
+        vertexShader: `
+          uniform float time;
+          attribute float aPhase;
+          varying float vAlpha;
+          void main() {
+            vec3 pos = position;
+            // Add gentle undulating wave displacement
+            pos.y += sin(time * 0.5 + pos.x * 0.1 + aPhase) * 2.0;
+            pos.x += cos(time * 0.3 + pos.y * 0.1) * 1.5;
+            
+            vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+            gl_PointSize = (10.0 / -mvPosition.z);
+            gl_Position = projectionMatrix * mvPosition;
+            
+            // Fade particles based on distance from center
+            vAlpha = smoothstep(50.0, 10.0, length(pos.xy));
+          }
+        `,
+        fragmentShader: `
+          uniform vec3 color;
+          varying float vAlpha;
+          void main() {
+            float dist = length(gl_PointCoord - vec2(0.5));
+            if (dist > 0.5) discard;
+            // Soft circular particle with distance-based fading
+            float alpha = (0.5 - dist) * 2.0 * vAlpha * 0.6;
+            gl_FragColor = vec4(color, alpha);
+          }
+        `,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+
+      const particles = new THREE.Points(geometry, material);
+      scene.add(particles);
+
+      // Mouse Parallax for BG
+      let mouseX = 0, mouseY = 0;
+      let targetX = 0, targetY = 0;
+      const windowHalfX = window.innerWidth / 2;
+      const windowHalfY = window.innerHeight / 2;
+
+      document.addEventListener('mousemove', (event) => {
+        mouseX = (event.clientX - windowHalfX) * 0.05;
+        mouseY = (event.clientY - windowHalfY) * 0.05;
+      });
+
+      const clock = new THREE.Clock();
+
+      function animate() {
+        requestAnimationFrame(animate);
+        
+        const elapsedTime = clock.getElapsedTime();
+        material.uniforms.time.value = elapsedTime;
+
+        // Smooth camera follow mouse
+        targetX = mouseX * 0.2;
+        targetY = mouseY * 0.2;
+        camera.position.x += (targetX - camera.position.x) * 0.02;
+        camera.position.y += (-targetY - camera.position.y) * 0.02;
+        camera.lookAt(scene.position);
+        
+        // Slowly rotate entire system for dynamic feel
+        particles.rotation.y = elapsedTime * 0.02;
+        particles.rotation.z = elapsedTime * 0.01;
+
+        renderer.render(scene, camera);
+      }
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      animate();
+    }
+
+    // Initialize 3D on load
+    window.addEventListener('DOMContentLoaded', () => {
+      init3DWelcome();
+      init3DBackground();
+    });
+
     // --- Configuration & Festivals ---
     const festivals2026 = [
       { name: 'Republic Day', date: '2026-01-26', impact: 0.8 },
@@ -1157,10 +1838,8 @@
         if (refreshIcon) refreshIcon.classList.remove('lucide-spin');
 
         // Initial Background Set (based on first state - Mumbai)
-        if (liveStateData.length > 0) {
-          const first = liveStateData[0];
-          updateWeatherBackground(first.conditionCode || 0);
-        }
+        // Sync Info Updated
+
 
         // Premium Dismissal of Loader
         setTimeout(() => {
@@ -1237,12 +1916,8 @@
         document.getElementById('page-title').innerText = event.currentTarget.innerText;
       }
 
-      // Handle background visibility
-      const atmosphere = document.getElementById('global-atmosphere');
       if (id === 'radar') {
-        atmosphere.style.opacity = '0';
-      } else {
-        atmosphere.style.opacity = '1';
+        // optionally handle map visibility
       }
     }
 
@@ -1250,33 +1925,74 @@
       const data = liveStateData[0]; // Primary (Mumbai)
       if (!data || !data.forecast || !data.forecast.time) return;
 
-      const grid = document.getElementById('forecast-grid');
-      grid.innerHTML = data.forecast.time.map((time, i) => {
+      const widget = document.getElementById('premium-weather-widget');
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('en-IN', {hour: '2-digit', minute: '2-digit', hour12: false});
+      const dateStr = now.toLocaleDateString('en-US', {month: 'short', day: 'numeric'}).toUpperCase();
+      const condCode = data.conditionCode || 0;
+      const condLabel = condCode === 0 ? 'CLEAR SKY' : condCode <= 3 ? 'PARTLY CLOUDY' : condCode >= 51 && condCode <= 67 ? 'RAINY' : condCode >= 71 ? 'STORMY' : 'CLOUDY';
+      const currentTemp = data.temp;
+      const currentRain = data.rain;
+
+      // Bottom Row Forecast Cards
+      const forecastCardsHtml = data.forecast.time.map((time, i) => {
         const d = new Date(time);
         const maxTemp = (data.forecast.temperature_2m_max && data.forecast.temperature_2m_max[i] !== undefined) ? data.forecast.temperature_2m_max[i] : 0;
         const minTemp = (data.forecast.temperature_2m_min && data.forecast.temperature_2m_min[i] !== undefined) ? data.forecast.temperature_2m_min[i] : 0;
         const rain = (data.forecast.precipitation_probability_max && data.forecast.precipitation_probability_max[i] !== undefined) ? data.forecast.precipitation_probability_max[i] : 0;
         const condCode = (data.forecast.weather_code && data.forecast.weather_code[i] !== undefined) ? data.forecast.weather_code[i] : 0;
-
-        const cond = rain > 60 ? 'storm' : rain > 30 ? 'rainy' : (condCode > 3 ? 'rainy' : 'sunny');
-
+        const cond = rain > 60 ? 'storm' : rain > 30 ? 'rainy' : (condCode > 3 ? 'cloudy' : 'sunny');
+        const iconName = cond === 'sunny' ? 'sun' : cond === 'storm' ? 'cloud-lightning' : cond === 'cloudy' ? 'cloud' : 'cloud-rain';
+        const iconColor = cond === 'sunny' ? '#fbbf24' : cond === 'storm' ? '#a78bfa' : cond === 'cloudy' ? '#e0e0e0' : '#60a5fa';
         return `
-          <div class="forecast-card glass" style="animation: fadeIn ${0.3 + i * 0.1}s cubic-bezier(0.23, 1, 0.32, 1) both;">
-            <span class="day-name">${d.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' })}</span>
-            <span class="date-label">${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' })}</span>
-            <i data-lucide="${cond === 'sunny' ? 'sun' : cond === 'storm' ? 'cloud-lightning' : 'cloud-rain'}" 
-               class="${cond === 'sunny' ? 'text-orange' : 'text-blue'}" style="width: 32px; height: 32px; margin: 0.5rem 0;"></i>
-            <div class="temp-range" style="text-align: center;">
-              <span class="high-temp">${Math.round(maxTemp)}°</span>
-              <span class="low-temp" style="display block; font-size: 0.8rem; margin-top: 0.2rem;">${Math.round(minTemp)}°</span>
-            </div>
-            <div class="rain-chance" style="background: rgba(59, 130, 246, 0.1); padding: 0.2rem 0.6rem; border-radius: 12px; margin-top: 0.5rem;">
-              <i data-lucide="droplets" style="width:12px;"></i>
-              <span>${rain}%</span>
-            </div>
+          <div class="widget-forecast-col ${i === 0 ? 'active' : ''}">
+            <span class="f-day">${d.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' })}</span>
+            <i data-lucide="${iconName}" class="f-icon" style="color: ${iconColor}"></i>
+            <span class="f-temp">${Math.round(maxTemp)}°</span>
+            <span class="f-temp-min">${Math.round(minTemp)}°</span>
           </div>
         `;
       }).join('');
+
+      // Inject the Pinterest-style structure
+      widget.innerHTML = `
+        <!-- Animated Sun -->
+        <div class="w-sun">
+          <div class="w-sun-rays"></div>
+          <div class="w-sun-core"></div>
+        </div>
+        <!-- Floating Cloud -->
+        <div class="w-cloud">
+          <div class="w-cloud-body"></div>
+        </div>
+
+        <!-- Top Content -->
+        <div class="widget-top-row">
+          <div class="widget-left-pane">
+            <div class="widget-city-name"><i data-lucide="map-pin" style="width:16px"></i> ${data.city}</div>
+            <div class="widget-date-line">${dateStr}</div>
+            <div class="widget-time-line">${timeStr}</div>
+            <div class="widget-condition-label">${condLabel}</div>
+          </div>
+          <div class="widget-right-pane">
+            <div class="widget-main-temp">+${currentTemp}°C</div>
+            <div class="widget-stat-list">
+              <div class="widget-stat-item"><i data-lucide="gauge" style="width:14px"></i> 1021 hPa</div>
+              <div class="widget-stat-item"><i data-lucide="sunrise" style="width:14px"></i> 06:38</div>
+              <div class="widget-stat-item"><i data-lucide="sunset" style="width:14px"></i> 18:50</div>
+              <div class="widget-stat-item"><i data-lucide="droplets" style="width:14px"></i> ${currentRain}% Rain</div>
+            </div>
+            <button class="glass-btn" onclick="showSection('radar')">
+              <i data-lucide="arrow-up-right" style="width: 14px;"></i> Radar
+            </button>
+          </div>
+        </div>
+
+        <!-- Bottom Forecast -->
+        <div class="widget-bottom-row">
+          ${forecastCardsHtml}
+        </div>
+      `;
       lucide.createIcons();
     }
 
@@ -1347,12 +2063,12 @@
 
         return `
           <button onclick="fetchStateWeather('${key}')" class="city-item glass" 
-                  style="animation: fadeIn ${0.4 + idx * 0.04}s cubic-bezier(0.23, 1, 0.32, 1) both; cursor: pointer; text-align: left; width: 100%; border: none; transition: transform 0.2s ease;">
+                  style="animation: fadeIn ${0.4 + idx * 0.04}s cubic-bezier(0.23, 1, 0.32, 1) both; cursor: pointer; text-align: left; width: 100%; padding: 1.25rem; transition: all 0.2s ease;">
             <div style="display: flex; flex-direction: column;">
               <span class="city-name" style="font-weight: 600; color: var(--text-primary); font-size: 1rem;">${displayName}</span>
               ${subName ? `<small style="color: var(--text-dim); font-size: 0.75rem;">${subName}</small>` : ''}
             </div>
-            <div style="margin-top: 1rem; color: var(--accent-blue); display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem;">
+            <div style="margin-top: 1rem; color: var(--accent-cyan); display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; font-weight: 600;">
               <span>View 7-Day Prediction</span>
               <i data-lucide="chevron-right" style="width: 14px;"></i>
             </div>
@@ -1370,11 +2086,12 @@
 
       title.innerText = info.alias || info.name || stateKey;
       container.style.display = 'block';
-      grid.innerHTML = '<div style="padding: 2rem; color: var(--text-secondary);">Loading Forecast...</div>';
+      grid.innerHTML = '<div style="padding: 2rem; color: var(--text-secondary);">Synchronizing ML Models & Telemetry...</div>';
       container.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
       try {
-        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${info.lat}&longitude=${info.lon}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&models=best_match`);
+        // Fetch extended weather data including humidity and wind for ML accuracy
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${info.lat}&longitude=${info.lon}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max&timezone=auto&models=best_match`);
         const data = await res.json();
         const dailyRaw = data.daily || {};
 
@@ -1392,37 +2109,80 @@
           temperature_2m_max: mergeDaily('temperature_2m_max'),
           temperature_2m_min: mergeDaily('temperature_2m_min'),
           precipitation_probability_max: mergeDaily('precipitation_probability_max'),
+          wind_speed_10m_max: mergeDaily('wind_speed_10m_max'),
           weather_code: mergeDaily('weather_code')
         };
+
+        // Prepare ML Payload for 7-day prediction
+        const mlPayload = {
+          weather_data: daily.time.map((time, i) => ({
+            hour: 14, // Predict for peak afternoon load
+            temperature: daily.temperature_2m_max[i],
+            humidity: 60, // Default estimate
+            wind_speed: daily.wind_speed_10m_max[i],
+            rain_prob: daily.precipitation_probability_max[i]
+          }))
+        };
+
+        // Call ML Backend or fallback to local logic
+        let predictions = Array(7).fill(null);
+        try {
+          const mlRes = await fetch('http://localhost:5000/api/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(mlPayload)
+          });
+          if (mlRes.ok) {
+            const mlResult = await mlRes.json();
+            predictions = mlResult.predictions || [];
+          }
+        } catch (e) {
+          console.warn("ML Prediction Sync failed for regional view:", e);
+          // Simple fallback calculation if ML backend is down
+          predictions = mlPayload.weather_data.map(d => 3000 + (d.rain_prob * 12) + (d.temperature > 35 ? (d.temperature - 35) * 50 : 0));
+        }
 
         grid.innerHTML = daily.time.map((time, i) => {
           const d = new Date(time);
           const rain = daily.precipitation_probability_max[i] || 0;
           const maxTemp = daily.temperature_2m_max[i] || 0;
           const minTemp = daily.temperature_2m_min[i] || 0;
+          const predVolume = predictions[i] ? Math.round(predictions[i]) : "N/A";
           const condCode = daily.weather_code[i] || 0;
           const cond = rain > 60 ? 'storm' : rain > 30 ? 'rainy' : (condCode > 3 ? 'rainy' : 'sunny');
 
           return `
-            <div class="forecast-card glass" style="animation: fadeIn ${0.3 + i * 0.1}s cubic-bezier(0.23, 1, 0.32, 1) both; min-width: 130px;">
-              <span class="day-name">${d.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' })}</span>
-              <span class="date-label">${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' })}</span>
+            <div class="forecast-card glass" style="animation: fadeIn ${0.3 + i * 0.1}s cubic-bezier(0.23, 1, 0.32, 1) both; display: flex; flex-direction: column; align-items: center; justify-content: space-between;">
+              <div style="text-align: center;">
+                <span class="day-name">${d.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' })}</span>
+                <span class="date-label">${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' })}</span>
+              </div>
+              
               <i data-lucide="${cond === 'sunny' ? 'sun' : cond === 'storm' ? 'cloud-lightning' : 'cloud-rain'}" 
-                 class="${cond === 'sunny' ? 'text-orange' : 'text-blue'}" style="width: 32px; height: 32px; margin: 0.5rem 0;"></i>
+                 class="${cond === 'sunny' ? 'text-orange' : 'text-blue'}" style="width: 44px; height: 44px; margin: 1.25rem 0;"></i>
+              
               <div class="temp-range" style="text-align: center;">
                 <span class="high-temp">${Math.round(maxTemp)}°</span>
-                <span class="low-temp" style="display: block; font-size: 0.8rem; margin-top: 0.2rem;">${Math.round(minTemp)}°</span>
+                <span class="low-temp" style="display: block; font-size: 0.9rem; margin-top: 0.25rem; color: var(--text-dim);">${Math.round(minTemp)}°</span>
               </div>
-              <div class="rain-chance" style="background: rgba(59, 130, 246, 0.1); padding: 0.2rem 0.6rem; border-radius: 12px; margin-top: 0.5rem;">
-                <i data-lucide="droplets" style="width:12px;"></i>
-                <span>${rain}%</span>
+
+              <!-- ML LOGIC: PREDICTED VOLUME -->
+              <div style="margin-top: 1.5rem; padding: 0.75rem; background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(14, 165, 233, 0.3); border-radius: 8px; width: 100%; text-align: center;">
+                <span style="font-size: 0.65rem; color: var(--accent-cyan); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 0.25rem;">Predicted Load</span>
+                <span style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">${predVolume.toLocaleString()}</span>
+                <span style="font-size: 0.6rem; color: var(--text-dim); display: block;">Expected Calls</span>
+              </div>
+
+              <div class="rain-chance" style="background: rgba(56, 189, 248, 0.1); padding: 0.4rem 0.8rem; border-radius: 12px; margin-top: 1rem; font-size: 0.8rem; font-weight: 600; color: var(--accent-cyan); display: flex; align-items: center; gap: 0.4rem;">
+                <i data-lucide="droplets" style="width:14px;"></i>
+                <span>${rain}% Rain</span>
               </div>
             </div>
           `;
         }).join('');
         lucide.createIcons();
       } catch (err) {
-        grid.innerHTML = `<div style="color: var(--accent-red);">Failed to load weather data: ${err.message}</div>`;
+        grid.innerHTML = `<div style="color: var(--accent-red); padding: 2rem;">Failed to load data: ${err.message}. Ensure ML backend is active.</div>`;
       }
     }
 
@@ -1432,7 +2192,20 @@
         const fDate = new Date(f.date);
         return Math.abs(fDate - today) / (1000 * 60 * 60 * 24) < 3;
       });
-      document.getElementById('active-festival').innerText = festival ? festival.name : 'Operational Base';
+      
+      const festivalNameEl = document.getElementById('active-festival');
+      const impactLabelEl = document.getElementById('festival-impact-label');
+      const correlationEl = document.getElementById('peak-correlation-val');
+      
+      if (festival) {
+        festivalNameEl.innerText = festival.name;
+        impactLabelEl.innerText = `Impact: ${(festival.impact * 100).toFixed(0)}% High Load Factor`;
+        correlationEl.innerText = "92%"; // Increased correlation during festivals
+      } else {
+        festivalNameEl.innerText = 'Operational Base';
+        impactLabelEl.innerText = 'Baseline Load Impact active';
+        correlationEl.innerText = "88%";
+      }
     }
 
     let loadChartInstance = null;
@@ -1473,18 +2246,37 @@
     }
 
     async function initCharts() {
-      Chart.defaults.color = 'rgba(255, 255, 255, 0.4)';
+      Chart.defaults.color = '#64748b';
       Chart.defaults.font.family = "'Outfit', sans-serif";
+      Chart.defaults.borderColor = '#f1f5f9';
 
       const commonOptions = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'top', align: 'end', labels: { usePointStyle: true, boxWidth: 8, padding: 20, font: { weight: '600' } } }
+          legend: { 
+            position: 'top', 
+            align: 'end', 
+            labels: { 
+              usePointStyle: true, 
+              boxWidth: 8, 
+              padding: 20, 
+              color: '#334155',
+              font: { weight: '600', size: 11 } 
+            } 
+          }
         },
         scales: {
-          y: { grid: { color: 'rgba(255,255,255,0.03)' }, border: { display: false }, ticks: { padding: 10 } },
-          x: { grid: { display: false }, border: { display: false }, ticks: { padding: 10 } }
+          y: { 
+            grid: { color: '#f1f5f9' }, 
+            border: { display: false }, 
+            ticks: { color: '#94a3b8', padding: 10 } 
+          },
+          x: { 
+            grid: { display: false }, 
+            border: { display: false }, 
+            ticks: { color: '#94a3b8', padding: 10 } 
+          }
         }
       };
 
@@ -1502,15 +2294,15 @@
         data: {
           labels: ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00'],
           datasets: [{
-            label: mlData ? 'ML Predicted Load' : 'Call Load',
+            label: mlData ? 'ML PREDICTED LOAD' : 'CALL LOAD',
             data: callLoadData,
-            borderColor: '#3b82f6',
-            backgroundColor: 'rgba(59, 130, 246, 0.05)',
-            fill: true, tension: 0.4, borderWidth: 3, pointRadius: 0, pointHoverRadius: 6
+            borderColor: '#0ea5e9',
+            backgroundColor: 'rgba(14, 165, 233, 0.05)',
+            fill: true, tension: 0.4, borderWidth: 3, pointRadius: 2, pointBackgroundColor: '#fff', pointHoverRadius: 6
           }, {
-            label: mlData ? 'Baseline Load expected' : 'Rainfall Intensity',
+            label: mlData ? 'BASELINE EXPECTED' : 'RAIN INTENSITY',
             data: baselineData,
-            borderColor: '#06b6d4', borderDash: [5, 5], fill: false, tension: 0.4, borderWidth: 2
+            borderColor: '#64748b', borderDash: [5, 5], fill: false, tension: 0.4, borderWidth: 2
           }]
         },
         options: commonOptions
@@ -1519,19 +2311,33 @@
       seasonalChartInstance = new Chart(document.getElementById('seasonalChart'), {
         type: 'bar',
         data: {
-          labels: ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'],
+          labels: ['JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV'],
           datasets: [{
-            label: 'Base Load',
+            label: 'BASE LOAD',
             data: [4000, 5200, 4800, 3500, 2800, 3200],
-            backgroundColor: 'rgba(59, 130, 246, 0.6)', borderRadius: 6
+            backgroundColor: '#0ea5e9', borderRadius: 4
           }, {
-            label: 'Festival Peak',
+            label: 'FESTIVAL PEAK',
             data: [4200, 4800, 5500, 3200, 3100, 5800],
-            backgroundColor: 'rgba(249, 115, 22, 0.8)', borderRadius: 6
+            backgroundColor: '#f59e0b', borderRadius: 4
           }]
         },
         options: commonOptions
       });
+
+      // Optional: Attempt to fetch real seasonal data from .NET backend
+      try {
+        const seasonalRes = await fetch('http://localhost:5274/api/analytics/seasonal');
+        if (seasonalRes.ok) {
+          const seasonalData = await seasonalRes.json();
+          seasonalChartInstance.data.labels = seasonalData.labels || seasonalChartInstance.data.labels;
+          seasonalChartInstance.data.datasets[0].data = seasonalData.baseLoad || seasonalChartInstance.data.datasets[0].data;
+          seasonalChartInstance.data.datasets[1].data = seasonalData.festivalPeak || seasonalChartInstance.data.datasets[1].data;
+          seasonalChartInstance.update();
+        }
+      } catch (e) {
+        console.log("Using fallback seasonal data (Backend offline)");
+      }
     }
 
     // --- Search Features ---
@@ -1670,8 +2476,7 @@
       smallIcon.setAttribute('data-lucide', currentStyle.icon);
       smallIcon.style.color = currentStyle.color;
 
-      // Update Planet Background
-      updateWeatherBackground(currentCode);
+      // Icons updated
 
       // Outlook
       const outlookHtml = daily.time.slice(1, 6).map((timeStr, index) => {
@@ -1699,50 +2504,13 @@
       lucide.createIcons();
     }
 
-    function updateWeatherBackground(code) {
-      console.log("Updating Weather Background for Code:", code);
-      document.body.classList.remove('weather-sunny', 'weather-rainy', 'weather-lightning');
-
-      if (code === 0 || code <= 3) {
-        // Clear sky, mainly clear, partly cloudy, overcast
-        document.body.classList.add('weather-sunny');
-      } else if (code >= 95) {
-        // Thunderstorms
-        document.body.classList.add('weather-lightning');
-        initRain();
-      } else if (code >= 45 && code <= 94) {
-        // Fog, Drizzle, Rain, Snow
-        document.body.classList.add('weather-rainy');
-        initRain();
-      } else {
-        // Default Fallback
-        document.body.classList.add('weather-sunny');
-      }
-    }
-
-    let rainInitiated = false;
-    function initRain() {
-      if (rainInitiated) return;
-      rainInitiated = true;
-      const container = document.getElementById('rain-container');
-      const dropCount = 150; // Denser rain for whole website feel
-
-      for (let i = 0; i < dropCount; i++) {
-        const drop = document.createElement('div');
-        drop.className = 'rain-drop';
-        drop.style.left = Math.random() * 100 + '%';
-        drop.style.animationDuration = (Math.random() * 0.7 + 0.3) + 's';
-        drop.style.animationDelay = Math.random() * 2 + 's';
-        drop.style.opacity = Math.random() * 0.5 + 0.2;
-        container.appendChild(drop);
-      }
-    }
-
-
     document.addEventListener('DOMContentLoaded', init);
   </script>
   <!-- 3D Tilt Library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
+      </div><!-- end page-content -->
+    </main>
+  </div><!-- end app-container -->
 </body>
 
 </html>

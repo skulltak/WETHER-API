@@ -1,0 +1,17 @@
+<header class="content-header">
+  <div class="header-left">
+    <div class="page-info">
+      <div class="page-title">Forecast</div>
+      <div class="app-subtitle">VE CARE Weather & Analytics</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="current-date">{{ currentDate }}</span>
+    <div class="sync-badge" (click)="onRefresh()">
+      <span class="live-dot"></span>
+      <span>Live</span>
+      <i data-lucide="refresh-cw" [class.lucide-spin]="isSyncing"></i>
+    </div>
+    <small class="last-updated">{{ lastUpdated }}</small>
+  </div>
+</header>

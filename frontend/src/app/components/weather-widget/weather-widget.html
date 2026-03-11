@@ -1,0 +1,43 @@
+<div class="premium-weather-widget" id="premium-weather-widget">
+  <!-- Animated Sun -->
+  <div class="w-sun">
+    <div class="w-sun-glow"></div>
+    <div class="w-sun-core"></div>
+  </div>
+  <!-- Floating Cloud -->
+  <div class="w-cloud">
+    <div class="w-cloud-body"></div>
+  </div>
+
+  <!-- Top Content -->
+  <div class="widget-top-row" *ngIf="weatherData">
+    <div class="widget-left-pane">
+      <div class="widget-city-name"><i data-lucide="map-pin"></i> {{ weatherData.city | uppercase }}</div>
+      <div class="widget-date-line">{{ weatherData.dailyForecast[0].date | date:'MMM d' | uppercase }}</div>
+      <div class="widget-time-line">{{ '14:38' }}</div>
+      <div class="widget-condition-label">{{ weatherData.condition | uppercase }}</div>
+    </div>
+    <div class="widget-right-pane">
+      <div class="widget-main-temp">+{{ weatherData.temperature }}°C</div>
+      <div class="widget-stat-list">
+        <div class="widget-stat-item"><i data-lucide="gauge"></i> 1021 hPa</div>
+        <div class="widget-stat-item"><i data-lucide="sunrise"></i> 06:38</div>
+        <div class="widget-stat-item"><i data-lucide="sunset"></i> 18:50</div>
+        <div class="widget-stat-item"><i data-lucide="droplets"></i> {{ weatherData.rainProbability }}% Rain</div>
+      </div>
+      <button class="glass-btn">
+        <i data-lucide="arrow-up-right"></i> Radar
+      </button>
+    </div>
+  </div>
+
+  <!-- Bottom Forecast -->
+  <div class="widget-bottom-row" *ngIf="weatherData">
+    <div class="widget-forecast-col" *ngFor="let day of weatherData.dailyForecast; let i = index" [class.active]="i === 0">
+      <span class="f-day">{{ day.date | date:'EEE' }}</span>
+      <i [attr.data-lucide]="getIcon(day.condition)" class="f-icon"></i>
+      <span class="f-temp">{{ day.maxTemp | number:'1.0-0' }}°</span>
+      <span class="f-temp-min">{{ day.minTemp | number:'1.0-0' }}°</span>
+    </div>
+  </div>
+</div>

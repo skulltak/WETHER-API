@@ -1,0 +1,13 @@
+.dashboard-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.forecast-section {
+  width: 100%;
+}
+
+.analytics-section {
+  width: 100%;
+}
